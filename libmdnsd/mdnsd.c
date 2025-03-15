@@ -975,8 +975,22 @@ INFO("MDNS Answer (r->rr): name=%s, type=%u, ttl=%lu, rdlen=%u, rdata=%p, ip=%s,
 		r = _r_next(d, NULL, m->an[i].name, m->an[i].type);
 		if (r && r->unique && r->modified && _a_match(&m->an[i], &r->rr)) {
 			/* double check, is this actually from us, looped back? */
-			INFO("ip.s_addr = 0x%08x, d->addr.s_addr = 0x%08x", ip.s_addr, d->addr.s_addr);
-			if (ip.s_addr == d->addr.s_addr)
+			char ip_str[INET_ADDRSTRLEN];
+			if (inet_ntop(AF_INET, &ip.s_addr, ip_str, sizeof(ip_str))) {
+				INFO("Checking if IP %s belongs to our interface", ip_str);
+			}
+
+			bool found_local = false;
+			ip_addr_t local_ips[MAX_LOCAL_IPS];
+			int count = get_local_ips(d, local_ips, MAX_LOCAL_IPS);
+	
+			for (int j = 0; j < count; j++) {
+				if (ip.s_addr == local_ips[j].s_addr) {
+					found_local = true;
+					break;
+				}
+			}
+			if (found_local)
 				continue;
 			_conflict(d, r);
 		}
