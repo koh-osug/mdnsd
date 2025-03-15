@@ -60,13 +60,23 @@ struct iface *iface_iterator(int first)
 	return iface;
 }
 
-struct iface *iface_find(const char *ifname)
+struct iface *iface_find(const char *ifname, sa_family_t addressfamily, struct in6_addr ina)
 {
 	struct iface *iface;
 
 	for (iface = iface_iterator(1); iface; iface = iface_iterator(0)) {
 		if (strcmp(iface->ifname, ifname))
 			continue;
+		
+		if (addressfamily == AF_INET) {
+			if (iface->inaddr.s_addr != ina.s6_addr32[0]) {
+				continue;
+			}
+		} else {
+			if (! IN6_ARE_ADDR_EQUAL(&iface->in6addr, &ina)) {
+				continue;
+			}
+		}
 
 		return iface;
 	}
@@ -119,7 +129,7 @@ static int sweep(void)
 	return changed;
 }
 
-void iface_init(char *ifname)
+void iface_init(char *ifname, char *ipaddress)
 {
 	struct ifaddrs *ifaddr, *ifa;
 	struct iface *iface = NULL;
@@ -169,8 +179,13 @@ void iface_init(char *ifname)
 		if (inet_pton(ifa->ifa_addr->sa_family, buf, &ina) <= 0)
 			continue;
 
+		INFO("checking iface %s with IP address: %s", ifa->ifa_name, buf);
+		if (ipaddress && strcmp(ipaddress, buf)) {
+			INFO("skipping IP address: %s", buf);
+            continue;
+		}
 		if (!iface)
-			iface = iface_find(ifa->ifa_name);
+			iface = iface_find(ifa->ifa_name, ifa->ifa_addr->sa_family, ina);
 
 		if (!iface) {
 			iface = calloc(1, sizeof(*iface));
@@ -189,6 +204,7 @@ void iface_init(char *ifname)
 		} else {
 			iface->unused = 0;
 		}
+		INFO("including iface %s with IP address: %s", ifa->ifa_name, buf);
 
 		if (ifa->ifa_addr->sa_family == AF_INET) {
 			if (iface->inaddr.s_addr != ina.s6_addr32[0]) {

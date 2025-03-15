@@ -52,6 +52,7 @@ static volatile sig_atomic_t reload = 0;
 static const char *prognm      = PACKAGE_NAME;
 char *hostnm      = NULL;
 static char *ifname      = NULL;
+static char *ipaddress      = NULL;
 static const char *path        = NULL;
 static int   background  = 1;
 static int   logging     = 1;
@@ -194,10 +195,11 @@ static void sys_init(void)
 	struct iface *iface;
 
 	/* Initialize or check if IP address changed, needed to update A records */
-	iface_init(ifname);
+	iface_init(ifname, ipaddress);
 
-	for (iface = iface_iterator(1); iface; iface = iface_iterator(0))
+	for (iface = iface_iterator(1); iface; iface = iface_iterator(0)) {
 		setup_iface(iface);
+	}
 }
 
 static void done(int signo __attribute__((unused)))
@@ -232,7 +234,8 @@ static int usage(int code)
 #ifdef HAVE_SO_BINDTODEVICE
 	       "    -i IFACE  Interface to announce services on, and get address from\n"
 #endif
-	       "    -l LEVEL  Set log level: none, err, notice (default), info, debug\n"
+	       "    -a ADDR   IP address to use for services\n"
+		   "    -l LEVEL  Set log level: none, err, notice (default), info, debug\n"
 	       "    -n        Run in foreground, do not detach from controlling terminal\n"
 	       "    -s        Use syslog even if running in foreground\n"
 	       "    -t TTL    Set TTL of mDNS packets, default: 1 (link-local only)\n"
@@ -272,7 +275,7 @@ int main(int argc, char *argv[])
 #ifdef HAVE_SO_BINDTODEVICE
 			   "i:"
 #endif
-			   "l:nst:v?")) != EOF) {
+			   "a:l:nst:v?")) != EOF) {
 		switch (c) {
 		case 'H':
 			hostnm = optarg;
@@ -287,7 +290,9 @@ int main(int argc, char *argv[])
 			ifname = optarg;
 			break;
 #endif
-
+		case 'a':
+			ipaddress = optarg;
+			break;
 		case 'l':
 			if (-1 == mdnsd_log_level(optarg))
 				return usage(1);

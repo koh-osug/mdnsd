@@ -910,6 +910,19 @@ int mdnsd_in(mdns_daemon_t *d, struct message *m, struct in_addr ip, unsigned sh
 							continue;
 
 						/* This answer isn't ours, conflict! */
+INFO("Calling _a_match with parameters:");
+INFO("Resource (m->an[j]): name=%s, type=%u, class=%u, ttl=%lu, rdlength=%u, rdata=%p",
+    m->an[j].name, m->an[j].type, m->an[j].class, m->an[j].ttl, m->an[j].rdlength, (void*)m->an[j].rdata);
+INFO("Known fields of m->an[j]: a.ip=%s, a.name=%s, aaaa.ip6=%s, ns.name=%s, cname.name=%s, ptr.name=%s, srv.priority=%u, srv.weight=%u, srv.port=%u, srv.name=%s",
+    inet_ntoa(m->an[j].known.a.ip), m->an[j].known.a.name,
+    inet_ntop(AF_INET6, &m->an[j].known.aaaa.ip6, (char[INET6_ADDRSTRLEN]){0}, INET6_ADDRSTRLEN), m->an[j].known.ns.name,
+    m->an[j].known.cname.name, m->an[j].known.ptr.name, m->an[j].known.srv.priority,
+    m->an[j].known.srv.weight, m->an[j].known.srv.port, m->an[j].known.srv.name);
+INFO("MDNS Answer (r->rr): name=%s, type=%u, ttl=%lu, rdlen=%u, rdata=%p, ip=%s, ip6=%s, rdname=%s, srv.priority=%u, srv.weight=%u, srv.port=%u",
+    r->rr.name, r->rr.type, r->rr.ttl, r->rr.rdlen, (void*)r->rr.rdata,
+    inet_ntoa(r->rr.ip),
+    inet_ntop(AF_INET6, &r->rr.ip6, (char[INET6_ADDRSTRLEN]){0}, INET6_ADDRSTRLEN), r->rr.rdname,
+    r->rr.srv.priority, r->rr.srv.weight, r->rr.srv.port);
 						if (!_a_match(&m->an[j], &r->rr)) {
 							_conflict(d, r);
 							has_conflict = true;
@@ -962,6 +975,7 @@ int mdnsd_in(mdns_daemon_t *d, struct message *m, struct in_addr ip, unsigned sh
 		r = _r_next(d, NULL, m->an[i].name, m->an[i].type);
 		if (r && r->unique && r->modified && _a_match(&m->an[i], &r->rr)) {
 			/* double check, is this actually from us, looped back? */
+			INFO("ip.s_addr = 0x%08x, d->addr.s_addr = 0x%08x", ip.s_addr, d->addr.s_addr);
 			if (ip.s_addr == d->addr.s_addr)
 				continue;
 			_conflict(d, r);

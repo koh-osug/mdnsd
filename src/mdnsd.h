@@ -79,9 +79,9 @@ void mdnsd_conflict(char *name, int type, void *arg);
 
 /* addr.c */
 struct iface *iface_iterator(int first);
-struct iface *iface_find(const char *ifname);
+struct iface *iface_find(const char *ifname, sa_family_t addressfamily, struct in6_addr ina);
 void          iface_free(struct iface *iface);
-void          iface_init(char *ifname);
+void          iface_init(char *ifname, char *ipaddress);
 void          iface_exit(void);
 
 /* conf.c */
